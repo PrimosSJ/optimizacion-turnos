@@ -36,7 +36,11 @@ def get_schedule(primos: Iterable, no_blocks: int, primos_per_shift: int = 2):
         for day, _ in enumerate(days):
             for block in range(no_blocks):
                 # OJO: En la BD, los horarios tienen 40 turnos, es decir que cada día tiene 8 bloques, por eso <shift := day*8 + block>
-                primo_shift_weight[primo].append((primo.desire_schedule[shift := day*8 + block] + 1)*(not primo.bussy_schedule[shift]))
+                
+                #primo_shift_weight[primo].append((primo.desire_schedule[shift := day*8 + block] + 1)*(not primo.bussy_schedule[shift]))
+                shift = day * 8 + block
+                primo_shift_weight[primo].append((primo.desire_schedule[shift] + 1) * (not primo.bussy_schedule[shift]))
+
 
     # Definimos el modelo para que maximice la satisfacción por bloque
     model = pulp.LpProblem(sense=pulp.LpMaximize)
@@ -76,6 +80,6 @@ if __name__ == '__main__':
     result = get_schedule(primos, 7)
     for primo in primos:
         print(primo.rol, result[primo])
-    with open('primos.csv', 'a+', encoding='utf-8') as file:
+    with open('primos.csv', 'w', encoding='utf-8') as file:
         for primo in primos:
             file.write(f'{primo.rol};{primo.mail};{primo.name};{primo.nick};{result[primo]}\n')

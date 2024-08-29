@@ -1,10 +1,10 @@
-filename = 'primos.csv'
-salida = open('salida.txt', 'w')
-file = open(filename)
-cant = file.readlines()
+nombre_archivo = 'primos.csv'
+salida = open('salida.txt', 'w', encoding='utf-8')
+archivo = open(nombre_archivo, encoding='utf-8')
+cant = archivo.readlines()
 ultima = cant[-1].strip().split(';')
 
-salida.write(f"INSERT INTO primos_checkins.public.tracks_primo (rol, mail, name, nick, schedule) VALUES ")
+salida.write("INSERT INTO primos_checkins.public.tracks_primo (rol, mail, name, nick, schedule) VALUES ")
 
 for linea in cant:
     buffer = []
@@ -31,4 +31,4 @@ for linea in cant:
 
 salida.write(";")
 salida.close()
-file.close()
+archivo.close()
