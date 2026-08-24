@@ -24,7 +24,7 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     # Algunas variables que necesitaremos después...
     days = 'lmxjv'
     shifts = range(len(days)*no_blocks)
-    total_shifts = sum(sum(day) for day in primos_per_shift)
+    total_shifts = sum(sum(req if req > 0 else 0 for req in day) for day in primos_per_shift)
     satisfaction = [pulp.LpVariable(name=f'satisfaction_{shift}', lowBound=0, cat=pulp.LpInteger) for shift in shifts]
     primo_has_shift, primo_shift_weight = {}, {}
     for primo in primos:
@@ -47,11 +47,18 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     for shift in shifts:
         block = shift % no_blocks
         day = int(shift / no_blocks)
-        primos_in_block = primos_per_shift[day][block]
 
-        # Tienen que haber <primos_per_shift> primos por turno.
+        primos_in_block = primos_per_shift[day][block]
         pps_constraint = sum(primo_has_shift[primo][shift] for primo in primos)
-        model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintEQ, rhs=primos_in_block, name=f'primos_per_shift_{shift}')
+
+        # Si primos_in_block es negativo, no se puede asignar ese turno
+        if (primos_in_block < 0):
+            model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintEQ, rhs=0, name=f'primos_per_shift_{shift}')
+            continue
+
+        # Tienen que haber por lo menos <primos_per_shift> primos por turno, y como máximo 2.
+        model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintGE, rhs=primos_in_block if primos_in_block != 0 else 1, name=f'primos_per_shift_{shift}')
+        model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintLE, rhs=2 if block != 7 else 1, name=f'primos_per_shift_limit_{shift}')
 
         # No te puede tocar un turno donde tienes clases
         maxsat_constraint = satisfaction[shift] - sum(primo_has_shift[primo][shift] * primo_shift_weight[primo][shift] for primo in primos)
@@ -88,12 +95,15 @@ if __name__ == '__main__':
     from primos import primos, new_primos
 
     req = [
-            [0, 2, 2, 2, 1, 2, 2, 1],
-            [1, 2, 1, 2, 2, 2, 2, 1],
-            [0, 2, 2, 2, 1, 2, 2, 1],
-            [0, 2, 2, 2, 1, 2, 2, 1],
-            [0, 2, 2, 2, 2, 1, 1, 1],
+            #                 A
+            # 0   1   2   3   4   5   6   7
+            [-1,  0,  0,  0,  1,  0,  0,  1],  # L
+            [+1,  0,  0,  0,  1,  0,  0,  1],  # M
+            [-1,  0,  0,  0,  0,  2,  1,  1],  # X
+            [-1,  0,  0,  0,  0,  2,  1,  1],  # J
+            [-1,  2,  2,  2,  2,  1,  1,  1],  # V
             ]
+
     shifts_per_primo = 3  # Daniel los calcula manualmente
     result = get_schedule(primos, new_primos, req, shifts_per_primo)
 
