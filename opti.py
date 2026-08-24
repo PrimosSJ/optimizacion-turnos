@@ -1,5 +1,4 @@
 import pulp
-from math import floor, ceil
 from collections.abc import Iterable
 
 
@@ -16,7 +15,7 @@ def parse_schedule(schedule, no_blocks):
     return parsed_schedule
 
 
-def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Iterable):
+def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Iterable, shifts_per_primo: int):
     if not len(primos):
         raise ValueError('<primos> está vacío')
 
@@ -26,7 +25,6 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     days = 'lmxjv'
     shifts = range(len(days)*no_blocks)
     total_shifts = sum(sum(day) for day in primos_per_shift)
-    no_shifts_per_primo = total_shifts/len(primos)
     satisfaction = [pulp.LpVariable(name=f'satisfaction_{shift}', lowBound=0, cat=pulp.LpInteger) for shift in shifts]
     primo_has_shift, primo_shift_weight = {}, {}
     for primo in primos:
@@ -70,9 +68,8 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     # Restricciones por primo
     for primo in primos:
         # Cada primo debe tener <no_shifts_per_primo> turnos
-        no_shifts = pulp.LpVariable(name=f'no_shifts_{primo.rol}', lowBound=floor(no_shifts_per_primo), upBound=ceil(no_shifts_per_primo), cat=pulp.LpInteger)
-        nt_constraint = no_shifts - sum(primo_has_shift[primo])
-        model += pulp.LpConstraint(e=nt_constraint, sense=pulp.LpConstraintEQ, rhs=0, name=f'no_shifts_constraint_{primo.rol}')
+        nt_constraint = sum(primo_has_shift[primo])
+        model += pulp.LpConstraint(e=nt_constraint, sense=pulp.LpConstraintEQ, rhs=shifts_per_primo, name=f'no_shifts_constraint_{primo.rol}')
 
     # Esta restricción evita que algún primo salga muy perjudicado
     mean = sum(satisfaction)/len(satisfaction)
@@ -97,7 +94,8 @@ if __name__ == '__main__':
             [0, 2, 2, 2, 1, 2, 2, 1],
             [0, 2, 2, 2, 2, 1, 1, 1],
             ]
-    result = get_schedule(primos, new_primos, req)
+    shifts_per_primo = 3  # Daniel los calcula manualmente
+    result = get_schedule(primos, new_primos, req, shifts_per_primo)
 
     for primo in primos:
         print(primo.nick, result[primo])
