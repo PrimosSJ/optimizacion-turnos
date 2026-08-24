@@ -25,7 +25,6 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     days = 'lmxjv'
     shifts = range(len(days)*no_blocks)
     total_shifts = sum(sum(req if req > 0 else 0 for req in day) for day in primos_per_shift)
-    satisfaction = [pulp.LpVariable(name=f'satisfaction_{shift}', lowBound=0, cat=pulp.LpInteger) for shift in shifts]
     primo_has_shift, primo_shift_weight = {}, {}
     for primo in primos:
         # Por cada primo y por cada turno ponemos una variable binaria que indica si el primo tiene (o no) ese turno.
@@ -42,7 +41,8 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
 
     # Definimos el modelo para que maximice la satisfacción por bloque
     model = pulp.LpProblem(sense=pulp.LpMaximize)
-    model += sum(satisfaction)
+    model += sum(primo_has_shift[primo][shift]*primo_shift_weight[primo][shift] for primo in primos for shift in shifts)
+
     # Restricciones por turno
     for shift in shifts:
         block = shift % no_blocks
@@ -68,6 +68,9 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
         elif (primos_in_block > 1):
             model += pulp.LpConstraint(e=np_constraint, sense=pulp.LpConstraintLE, rhs=1, name=f'new_primos_in_shift_{shift}')
 
+    # Mínimo de satisfacción por primo
+    min_sat = 3
+
     # Restricciones por primo
     for primo in primos:
         # Cada primo debe tener <no_shifts_per_primo> turnos
@@ -79,10 +82,9 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
             if primo_shift_weight[primo][shift] == 0:
                 model += pulp.LpConstraint(e=primo_has_shift[primo][shift], sense=pulp.LpConstraintEQ, rhs=0)
 
-    # Esta restricción evita que algún primo salga muy perjudicado
-    mean = sum(satisfaction)/len(satisfaction)
-    std = sum(var - mean for var in satisfaction)/len(satisfaction)
-    model += std <= 2*(total_shifts / len(primos_per_shift))/len(satisfaction)
+        # Garantiza un mínimo de satisfacción (3 turnos normales)
+        primo_total_sat_constraint = sum(primo_has_shift[primo][shift]*primo_shift_weight[primo][shift] for shift in shifts)
+        model += pulp.LpConstraint(e=primo_total_sat_constraint, sense=pulp.LpConstraintGE, rhs=min_sat, name=f'min_sat_{primo.rol}')
 
     # Resolvemos
     model.solve()
