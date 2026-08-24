@@ -67,9 +67,9 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
         # No pueden haber primos nuevos solos, y tampoco puede haber más de uno en turno normal
         np_constraint = sum(primo_has_shift[primo][shift] for primo in new_primos)
 
-        if (primos_in_block == 1):
+        if (primos_in_block <= 1):
             model += pulp.LpConstraint(e=np_constraint, sense=pulp.LpConstraintEQ, rhs=0, name=f'no_new_primos_{shift}')
-        elif (primos_in_block != 0):
+        elif (primos_in_block > 1):
             model += pulp.LpConstraint(e=np_constraint, sense=pulp.LpConstraintLE, rhs=1, name=f'new_primos_in_shift_{shift}')
 
     # Restricciones por primo
