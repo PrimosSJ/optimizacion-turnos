@@ -60,10 +60,6 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
         model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintGE, rhs=primos_in_block if primos_in_block != 0 else 1, name=f'primos_per_shift_{shift}')
         model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintLE, rhs=2 if block != 7 else 1, name=f'primos_per_shift_limit_{shift}')
 
-        # No te puede tocar un turno donde tienes clases
-        maxsat_constraint = satisfaction[shift] - sum(primo_has_shift[primo][shift] * primo_shift_weight[primo][shift] for primo in primos)
-        model += pulp.LpConstraint(e=maxsat_constraint, sense=pulp.LpConstraintEQ, rhs=0)
-
         # No pueden haber primos nuevos solos, y tampoco puede haber más de uno en turno normal
         np_constraint = sum(primo_has_shift[primo][shift] for primo in new_primos)
 
@@ -77,6 +73,11 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
         # Cada primo debe tener <no_shifts_per_primo> turnos
         nt_constraint = sum(primo_has_shift[primo])
         model += pulp.LpConstraint(e=nt_constraint, sense=pulp.LpConstraintEQ, rhs=shifts_per_primo, name=f'no_shifts_constraint_{primo.rol}')
+
+        # No pueden tener turno cuando tienen clases
+        for shift in shifts:
+            if primo_shift_weight[primo][shift] == 0:
+                model += pulp.LpConstraint(e=primo_has_shift[primo][shift], sense=pulp.LpConstraintEQ, rhs=0)
 
     # Esta restricción evita que algún primo salga muy perjudicado
     mean = sum(satisfaction)/len(satisfaction)
