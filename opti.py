@@ -15,7 +15,7 @@ def parse_schedule(schedule, no_blocks):
     return parsed_schedule
 
 
-def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Iterable, shifts_per_primo: int):
+def get_schedule(primos: Iterable, primos_per_shift: Iterable, shifts_per_primo: int):
     if not len(primos):
         raise ValueError('<primos> está vacío')
 
@@ -62,7 +62,7 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
         model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintLE, rhs=2 if block != 7 else 1, name=f'primos_per_shift_limit_{shift}')
 
         # No pueden haber primos nuevos solos, y tampoco puede haber más de uno en turno normal
-        np_constraint = sum(primo_has_shift[primo][shift] for primo in new_primos)
+        np_constraint = sum(primo_has_shift[primo][shift] if primo.new else 0 for primo in primos)
 
         if (primos_in_block <= 1):
             model += pulp.LpConstraint(e=np_constraint, sense=pulp.LpConstraintEQ, rhs=0, name=f'no_new_primos_{shift}')
@@ -96,7 +96,7 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
 
 
 if __name__ == '__main__':
-    from primos import primos, new_primos
+    from primos import primos
 
     req = [
             #                 A
@@ -109,12 +109,14 @@ if __name__ == '__main__':
             ]
 
     shifts_per_primo = 3  # Daniel los calcula manualmente
-    result = get_schedule(primos, new_primos, req, shifts_per_primo)
+    result = get_schedule(primos, req, shifts_per_primo)
 
     for primo in primos:
         print(primo.nick, result[primo])
+
     with open('primos.csv', 'w', encoding='utf-8') as file:
         file.write('rol,nombre,apodo,mail,tipo,horario\n')
 
         for primo in primos:
-            file.write(f'{primo.rol},{primo.name},{primo.nick},{primo.mail},PRIMO,{result[primo]}\n')
+            permisos = 'PRIMO' if not primo.coordinator else 'AMBOS'
+            file.write(f'{primo.rol},{primo.name},{primo.nick},{primo.mail},{permisos},{result[primo]}\n')

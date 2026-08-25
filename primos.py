@@ -3,7 +3,7 @@ import csv
 
 
 class Primo:
-    def __init__(self, rol, mail, name, nick, bussy, desire):
+    def __init__(self, rol, mail, name, nick, bussy, desire, new, coordinator):
         self.rol = rol
         self.rol_safe = rol[:-2] + '_' + rol[-1]
         self.mail = mail
@@ -11,6 +11,8 @@ class Primo:
         self.nick = nick
         self.bussy_schedule = bussy
         self.desire_schedule = desire
+        self.new = True if new == 'true' else False
+        self.coordinator = True if coordinator == 'true' else False
 
     def __str__(self):
         return self.rol_safe
@@ -51,12 +53,8 @@ def _parse(schedule):
 
 
 primos = []
-new_primos = []
 
-for rol, mail, name, nick, bussy, desire, new in _schedules:
+for rol, mail, name, nick, bussy, desire, new, coordinator in _schedules:
     bussy, desire = _parse(bussy), _parse(desire)
-    primo = Primo(rol, mail, name, nick, bussy, desire)
+    primo = Primo(rol, mail, name, nick, bussy, desire, new, coordinator)
     primos.append(primo)
-
-    if (new == 'True' or new == 'true'):  # Ooops
-        new_primos.append(primo)
