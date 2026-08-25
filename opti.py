@@ -11,7 +11,7 @@ def parse_schedule(schedule, no_blocks):
                 blocks.append(str(block))
 
         if len(blocks):
-            parsed_schedule += f'{day}{",".join(blocks)}'
+            parsed_schedule += ''.join([f'{day}{b}' for b in blocks])
     return parsed_schedule
 
 
@@ -25,10 +25,11 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     days = 'lmxjv'
     shifts = range(len(days)*no_blocks)
     total_shifts = sum(sum(req if req > 0 else 0 for req in day) for day in primos_per_shift)
+
     primo_has_shift, primo_shift_weight = {}, {}
     for primo in primos:
         # Por cada primo y por cada turno ponemos una variable binaria que indica si el primo tiene (o no) ese turno.
-        primo_has_shift[primo] = [pulp.LpVariable(name=f'has_shift_{primo.rol}_{shift}', cat=pulp.LpBinary) for shift in shifts]
+        primo_has_shift[primo] = [pulp.LpVariable(name=f'has_shift_{primo}_{shift}', cat=pulp.LpBinary) for shift in shifts]
         # Establecemos el peso de cada turno para cada primo (0 si no puede, 1 si puede, 2 si puede y lo quiere)
         primo_shift_weight[primo] = []
         for day, _ in enumerate(days):
@@ -75,7 +76,7 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
     for primo in primos:
         # Cada primo debe tener <no_shifts_per_primo> turnos
         nt_constraint = sum(primo_has_shift[primo])
-        model += pulp.LpConstraint(e=nt_constraint, sense=pulp.LpConstraintEQ, rhs=shifts_per_primo, name=f'no_shifts_constraint_{primo.rol}')
+        model += pulp.LpConstraint(e=nt_constraint, sense=pulp.LpConstraintEQ, rhs=shifts_per_primo, name=f'no_shifts_constraint_{primo}')
 
         # No pueden tener turno cuando tienen clases
         for shift in shifts:
@@ -84,13 +85,13 @@ def get_schedule(primos: Iterable, new_primos: Iterable, primos_per_shift: Itera
 
         # Garantiza un mínimo de satisfacción (3 turnos normales)
         primo_total_sat_constraint = sum(primo_has_shift[primo][shift]*primo_shift_weight[primo][shift] for shift in shifts)
-        model += pulp.LpConstraint(e=primo_total_sat_constraint, sense=pulp.LpConstraintGE, rhs=min_sat, name=f'min_sat_{primo.rol}')
+        model += pulp.LpConstraint(e=primo_total_sat_constraint, sense=pulp.LpConstraintGE, rhs=min_sat, name=f'min_sat_{primo}')
 
     # Resolvemos
     model.solve()
     schedule, variables = {}, {var.name: var.value() for var in model.variables()}
     for primo in primos:
-        schedule[primo] = parse_schedule([bool(variables[f'has_shift_{primo.rol}_{shift}']) for shift in shifts], no_blocks)
+        schedule[primo] = parse_schedule([bool(variables[f'has_shift_{primo}_{shift}']) for shift in shifts], no_blocks)
     return schedule
 
 
@@ -113,5 +114,7 @@ if __name__ == '__main__':
     for primo in primos:
         print(primo.nick, result[primo])
     with open('primos.csv', 'w', encoding='utf-8') as file:
+        file.write('rol,nombre,apodo,mail,tipo,horario\n')
+
         for primo in primos:
-            file.write(f'{primo.rol};{primo.mail};{primo.name};{primo.nick};{result[primo]}\n')
+            file.write(f'{primo.rol},{primo.name},{primo.nick},{primo.mail},PRIMO,{result[primo]}\n')

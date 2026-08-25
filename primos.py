@@ -5,11 +5,23 @@ import csv
 class Primo:
     def __init__(self, rol, mail, name, nick, bussy, desire):
         self.rol = rol
+        self.rol_safe = rol[:-2] + '_' + rol[-1]
         self.mail = mail
         self.name = name
         self.nick = nick
         self.bussy_schedule = bussy
         self.desire_schedule = desire
+
+    def __str__(self):
+        return self.rol_safe
+
+    def __hash__(self):
+        return hash(self.rol_safe)
+
+    def __eq__(self, other):
+        if isinstance(other, Primo):
+            return other.rol_safe == self.rol_safe
+        return False
 
 
 def datos_a_tupla(filename):
