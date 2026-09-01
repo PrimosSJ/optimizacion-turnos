@@ -24,7 +24,6 @@ def get_schedule(primos: Iterable, primos_per_shift: Iterable, shifts_per_primo:
     # Algunas variables que necesitaremos después...
     days = 'lmxjv'
     shifts = range(len(days)*no_blocks)
-    total_shifts = sum(sum(req if req > 0 else 0 for req in day) for day in primos_per_shift)
 
     primo_has_shift, primo_shift_weight = {}, {}
     for primo in primos:
@@ -82,6 +81,11 @@ def get_schedule(primos: Iterable, primos_per_shift: Iterable, shifts_per_primo:
         for shift in shifts:
             if primo_shift_weight[primo][shift] == 0:
                 model += pulp.LpConstraint(e=primo_has_shift[primo][shift], sense=pulp.LpConstraintEQ, rhs=0)
+
+        # Evita que se asignen los dos turnos de almuerzo juntos
+        for d in range(len(days)):
+            lunch_constraint = primo_has_shift[primo][d*no_blocks + 3] + primo_has_shift[primo][d*no_blocks + 4]
+            model += pulp.LpConstraint(e=lunch_constraint, sense=pulp.LpConstraintLE, rhs=1)
 
         # Garantiza un mínimo de satisfacción (3 turnos normales)
         primo_total_sat_constraint = sum(primo_has_shift[primo][shift]*primo_shift_weight[primo][shift] for shift in shifts)
