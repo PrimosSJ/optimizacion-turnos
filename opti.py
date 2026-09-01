@@ -58,7 +58,7 @@ def get_schedule(primos: Iterable, primos_per_shift: Iterable, shifts_per_primo:
             continue
 
         # Tienen que haber por lo menos <primos_per_shift> primos por turno, y como máximo 2.
-        model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintGE, rhs=primos_in_block if primos_in_block != 0 else 1, name=f'primos_per_shift_{shift}')
+        model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintGE, rhs=primos_in_block, name=f'primos_per_shift_{shift}')
         model += pulp.LpConstraint(e=pps_constraint, sense=pulp.LpConstraintLE, rhs=2 if block != 7 else 1, name=f'primos_per_shift_limit_{shift}')
 
         # No pueden haber primos nuevos solos, y tampoco puede haber más de uno en turno normal
